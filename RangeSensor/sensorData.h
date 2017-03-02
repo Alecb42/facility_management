@@ -14,12 +14,14 @@ public:
   void setsensorData(int);
 
   //get functions
-  float getRange();
+  double getRange();
+  double getVoltage();
   int getTime();
 
 private:
   int acquisitionTime;
-  float measuredRange;
+  double measuredRange;
+  double voltage;
 };
 
 #endif

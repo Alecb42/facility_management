@@ -8,7 +8,7 @@
 //Variable Declaration
 int sensorPin = A0; //Assigning the sensor analog entry to pin A0
 int redLED = 8; //Assigning the red LED to pin 8
-float tempReading;  //Contain the temporary readings that will be taken every time void loop() runs
+double tempReading, tempReading2;  //Contain the temporary readings that will be taken every time void loop() runs
 sensorData datareading; //SensorData object that will store the range reading as a private data member
 
 
@@ -35,8 +35,8 @@ void setup() {
   Serial.begin(9600); //Initializing serial connection
   pinMode(redLED, OUTPUT);  //Setting pinmode output
   
-  if (Ethernet.begin(mac) == 0) {
-    Serial.println("Failed to configure Ethernet using DHCP");
+  //if (Ethernet.begin(mac) == 0) {
+    //Serial.println("Failed to configure Ethernet using DHCP");
     // no point in carrying on, so do nothing forevermore:
     // try to congifure using IP address instead of DHCP:
     //Ethernet.begin(mac, ip);
@@ -49,7 +49,7 @@ void setup() {
     //Serial.println(Ethernet.gatewayIP());
     //Serial.print("DNS Server IP     : ");
     //Serial.println(Ethernet.dnsServerIP());
-  }
+ // }
 }
 
 // Void loop contains the code that will be runned reapeatidly.
@@ -57,16 +57,17 @@ void loop() {
   
   datareading.setsensorData(sensorPin);
   tempReading = datareading.getRange();
+  tempReading2 = datareading.getVoltage();
   Serial.println(tempReading); //Serial monitoring of the range
-  
-  if (client == true)   //Check for connection
-  {
-    digitalWrite(redLED, HIGH); //Opening the red LED if the client is connected
-  }
+  Serial.println(tempReading);
+ // if (client == true)   //Check for connection
+ // {
+   digitalWrite(redLED, HIGH); //Opening the red LED if the client is connected
+ // }
   
   //INSERT DETECTION ALGORITHM HERE
-  if(tempReading < 800.00) //Temporary algorithm
-  {
+  //if(tempReading < 800.00) //Temporary algorithm
+  //{
     //SENDING DATA TO THE SERVER
     //if(client.connected()){ //DATA SENT TO SERVER
     // Make a HTTP request:
@@ -86,7 +87,7 @@ void loop() {
     //client.println();
     //client.println();
     //client.stop();
-    }
-  }
+    //}
+  //}
   delay (100);
 }
