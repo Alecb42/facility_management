@@ -1,93 +1,146 @@
+/*
+ * Created for the Facility Management Application
+ * The application was developped for ELEC 390 - Team Design Project
+*/
 
 #include <SPI.h>
-#include <Ethernet.h>
+#include <Ethernet2.h>
 #include <EEPROM.h>
 #include "sensorData.h"
 #include "Arduino.h"
 
-//Variable Declaration
-int sensorPin = A0; //Assigning the sensor analog entry to pin A0
-int redLED = 8; //Assigning the red LED to pin 8
-double tempReading, tempReading2;  //Contain the temporary readings that will be taken every time void loop() runs
-sensorData datareading; //SensorData object that will store the range reading as a private data member
+//---------------------------Variable Declaration-------------------------------------
+
+//Assigning the sensor analog entry to pin A0.
+int sensorPin = A0;
+
+//Assigning the red LED to pin 8
+int BLUELED = 11; //Blinks if the internet connection could not be established.
+int REDLED = 12; //Blinks if the server connection could not be established.
+
+//Flag declaration
+bool connectionFlag = true; //Will be set to false if the server cannot connect to the network.
+bool serverFlag = true; //Will be set to false if the server cannot connect to the database. 
+
+//Declaring variables to hold the temporary readings that will be taken every time void loop() runs.
+double tempReading; 
+
+//SensorData object that will store the range reading as a private data member.
+sensorData datareading; 
+
+//---------------------------------------------------------------------------------
 
 
-//Ethernet Settings
-//Mac Adress from ethernet shield
-byte mac[] = {0x90, 0xa2, 0xda, 0x10, 0xc9, 0xa4};
+//--------------------------Ethernet Settings--------------------------------------
 
-//Shield static ip address 
-//IPAdress ip(192,168,0,177) ;
+//Mac Adress from ethernet shield.
+byte mac[] = {0x90, 0xA2, 0xDA, 0x10, 0xC9, 0x4A};\
 
-//Server ip adress
+//IP adress of the server.
+IPAddress ip(192,168,2,68) ;
+
+//Server IP adress.
 //IPAdress server(74, 125, 232, 128); 
 
-// Initialize the Ethernet client library
-// with the IP address and port of the server
-// that you want to connect to (port 80 is default for HTTP):
+// Initializing the Ethernet client.
 EthernetClient client;
 
-int interval = 5000;  //Interval between data dumps
+//---------------------------------------------------------------------------------
 
 void setup() {
-  // put your setup code here, to run once:
-// initialize serial communication at 9600 bits per second:
-  Serial.begin(9600); //Initializing serial connection
-  pinMode(redLED, OUTPUT);  //Setting pinmode output
   
-  //if (Ethernet.begin(mac) == 0) {
-    //Serial.println("Failed to configure Ethernet using DHCP");
-    // no point in carrying on, so do nothing forevermore:
-    // try to congifure using IP address instead of DHCP:
-    //Ethernet.begin(mac, ip);
-    //Serial.println("Connected to: \n");
-    //Serial.print("IP Address        : ");
-    //Serial.println(Ethernet.localIP());
-    //Serial.print("Subnet Mask       : ");
-    //Serial.println(Ethernet.subnetMask());
-    //Serial.print("Default Gateway IP: ");
-    //Serial.println(Ethernet.gatewayIP());
-    //Serial.print("DNS Server IP     : ");
-    //Serial.println(Ethernet.dnsServerIP());
- // }
+  Serial.begin(9600);  // Open serial communication port. 
+  pinMode(REDLED, OUTPUT);  //Configure REDLED pin as an input or output.
+  
+  //Starting the Ethernet connection
+  if (Ethernet.begin(mac) == 0) {
+     Serial.println("Failed to configure Ethernet using DHCP"); //Print error message if the connection with the internet failed. 
+     connectionFlag = false; //Set the connection flag to false.
+  }
+  
+  // Print your local IP address, to confirm that the device is connecte to the network.
+  Serial.print("My IP address: ");
+  for (byte thisByte = 0; thisByte < 4; thisByte++) { // print the value of each byte of the IP address:
+    Serial.print(Ethernet.localIP()[thisByte], DEC);
+    Serial.print(".");
+  }
+  Serial.println();
 }
 
-// Void loop contains the code that will be runned reapeatidly.
-void loop() { 
+void loop() { // Void loop contains the code that will be runned reapeatidly.
   
-  datareading.setsensorData(sensorPin);
-  tempReading = datareading.getRange();
-  tempReading2 = datareading.getVoltage();
-  Serial.println(tempReading); //Serial monitoring of the range
-  Serial.println(tempReading);
- // if (client == true)   //Check for connection
- // {
-   digitalWrite(redLED, HIGH); //Opening the red LED if the client is connected
- // }
-  
-  //INSERT DETECTION ALGORITHM HERE
-  //if(tempReading < 800.00) //Temporary algorithm
-  //{
-    //SENDING DATA TO THE SERVER
-    //if(client.connected()){ //DATA SENT TO SERVER
-    // Make a HTTP request:
-    //client.print( "GET /add_data.php?");
-    //client.print("serial=");
-    //client.print( "RangeSensor" );
-    //client.print("&&");
-    //client.print("entry=");
-    //client.print( "1");
-    //client.print("&&");
-    //client.print("time=");
-    //client.print(entry_time);
-    //client.println( " HTTP/1.1");
-    //client.println( "Host: 192.168.2.9" );
-    //client.println(server);
-    //client.println( "Connection: close" );
-    //client.println();
-    //client.println();
-    //client.stop();
-    //}
-  //}
-  delay (100);
+  //Check for the state of the network connection of the microcontroller.
+  if (connectionFlag == false)
+    {
+      ledBlink(BLUELED); //The blue LED on the device will blink if the connection to internet was not successful
+    }
+
+  //Check for the state of the server connection of the microcontroller.
+  if (serverFlag == false)
+    {
+      ledBlink(REDLED); //The red LED on the device will blink if the connection to the server is not successful
+    }
+    
+  //If internet and server is connected, carry on with the data reading.
+  else
+    {
+      datareading.setsensorData(sensorPin); 
+      tempReading = datareading.getRange();
+      Serial.println(tempReading); //Serial monitoring of the range
+      
+      //INSERT DETECTION ALGORITHM HERE
+      if(tempReading < 600) //Temporary algorithm
+        {
+          Serial.println("ENTRY");
+          //sendToDatabase();
+        }
+    }
+ delay(25);   //Wait 25 millisecond before next reading
 }
+
+void sendToDatabase (sensorData dataObject){  //Void function that will send a HTTP request to push data on the server. 
+  
+  client.connect; ("http://www.test.com", 80) ;  //Connect the client Object to the address of the mySQL database.
+  if (client.connected) //client.connected returns boolean true of false, will send data if true(connected).
+    { 
+      serverFlag = true;  //Set state of server to connected. 
+      
+      //The HTTP GET Request follows 
+      client.print( "GET /testserver/facility/add_data.php?"); //Enter name of real server
+      client.print("entry=");
+      client.print( "1" );
+      client.print("&&");
+      client.print("month=");
+      client.print(dataObject.getTimeMonth());
+      client.print("&&");
+      client.print("day=");
+      client.print( dataObject.getTimeDay());
+      client.print("&&");
+      client.print("hours=");
+      client.print( dataObject.getTimeHour());
+      client.print("&&");
+      client.print("minutes=");
+      client.print( dataObject.getTimeMinute());
+      client.println( " HTTP/1.1");
+      client.print( "Host: test.com" );
+      //client.println(server)
+      client.println( "Connection: close" );
+      client.println();
+      client.println();
+      client.stop();
+    }
+  else 
+    {
+      serverFlag = false; 
+    }
+}
+
+void ledBlink (int pin) //Void function that will allow a given LED to blink.
+{
+  digitalWrite(pin, HIGH);  //Turn on the LED assigned to the integer pin.
+  delay(1000);  //Wait for 1000 miliseconds
+  digitalWrite(pin, LOW); //Turn of the LED assigned to the integer pin.
+  delay(1000);  //Wait for 1000 miliseconds
+}
+
+
